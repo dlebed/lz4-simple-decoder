@@ -21,6 +21,47 @@ static void lz4_copy(uint8_t *dst, const uint8_t *src, size_t len)
     }
 }
 
+static void lz4_offset_copy(uint8_t *dst, size_t offset, size_t len)
+{
+    uint8_t *dst_end = dst + len;
+    const uint8_t *src = dst - offset;
+
+    if (offset <= sizeof(uint32_t)) {
+        uint32_t val;
+
+        memcpy(&val, src, sizeof(val));
+
+        switch (offset) {
+            case 1:
+                val &= 0xFF;
+                val |= val << 8;
+                val |= val << 16;
+                break;
+            case 2:
+                val &= 0xFFFF;
+                val |= val << 16;
+                break;
+            case 3:
+                val &= 0xFFFFFF;
+                val |= val << 24;
+                break;
+            default:
+                break;
+        }
+
+        while (dst < dst_end) {
+            memcpy(dst, &val, sizeof(val));
+            dst += sizeof(val);
+        }
+    } else {
+        while (dst < dst_end) {
+            memcpy(dst, src, 4);
+            dst += 4;
+            src += 4;
+        }
+    }
+}
+
 static size_t lz4_block_data_decode(uint8_t *dst, const uint8_t *src,
                                     size_t block_size)
 {
@@ -60,7 +101,7 @@ static size_t lz4_block_data_decode(uint8_t *dst, const uint8_t *src,
 
         match_len += LZ4_MIN_MATCH_LEN;
 
-        lz4_copy(dst, dst - offset, match_len);
+        lz4_offset_copy(dst, offset, match_len);
         dst += match_len;
     }
 
