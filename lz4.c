@@ -5,6 +5,7 @@
 
 #include "lz4.h"
 #include <string.h>
+#include <stdint.h>
 
 enum {
     LZ4_TOKEN_LEN_MORE      = 0x0F,
@@ -49,16 +50,16 @@ static void lz4_offset_copy(uint8_t *dst, size_t offset, size_t len)
                 break;
         }
 
-        while (dst < dst_end) {
+        do {
             memcpy(dst, &val, sizeof(val));
             dst += sizeof(val);
-        }
+        } while (dst < dst_end);
     } else {
-        while (dst < dst_end) {
+        do {
             memcpy(dst, src, 4);
             dst += 4;
             src += 4;
-        }
+        } while (dst < dst_end);
     }
 }
 
