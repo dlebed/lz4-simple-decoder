@@ -45,7 +45,14 @@ static void lz4_offset_copy(uint8_t *dst, size_t offset, size_t len)
             case 3:
                 val &= 0xFFFFFF;
                 val |= val << 24;
-                break;
+
+                do {
+                    memcpy(dst, &val, sizeof(val));
+                    dst += sizeof(val);
+                    val = val >> 8 | val << 24; /* ROR by 8 bits */
+                } while (dst < dst_end);
+
+                return;
             default:
                 break;
         }
