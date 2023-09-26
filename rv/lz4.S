@@ -1,37 +1,74 @@
 
 .text
 
+/*
+ * void lz4_block_data_decode(void *dst, void *src, uint32_t block_size)
+ * a0 = destination
+ * a1 = source (start of compressed block data)
+ * a2 = block data size
+ */
 lz4_block_data_decode:
-
-
 lz4_const_init:
     /* prerequisite constants, to be moved into upper function */
     li   t0, 0x01010101
-    li   a5,  0x00FFFFFF
     li   t1, 1
     li   t2, 2
     li   t3, 3
+    li   t4, 0x0F
     li   t5, 5
+    li   t6, 0xFF
     /* end of constants */
 
-/*
- * void lz4_offset_copy(void *dst, uint32_t offset, uint32_t len)
- * a0 = destination
- * a1 = offset
- * a2 = length
- */
-.balign 32
-lz4_offset_copy:
-    add  t6, a0, a2  /* t6 = dst_end = dst + len */
-    sub  a2, a0, a1  /* a2 = src = dst - offset */
+    add  a6, a1, a2     /* a6 = src_end = src + block_size */
 
-    bgeu a1, t5, lz4_offset_copy_far_loop
+lz4_block_data_loop:
+    lbu  a2, 0(a1)      /* a2 = token */
+    addi a1, a1, 1
+    srli a3, a2, 4      /* a3 = literal length */
+
+    beqz a3, lz4_block_match
+    beq  a3, t4, lz4_block_lit_len_read
+lz4_block_lit_len_done:
+    add  a3, a1, a3     /* a3 = src_end = src + lit_len */
+
+lz4_block_lit_copy_loop:
+    lbu  a4, 0(a1)
+    sb   a4, 0(a0)
+    addi a0, a0, 1
+    addi a1, a1, 1
+    bltu a1, a3, lz4_block_lit_copy_loop
+
+    bgeu a1, a6, lz4_block_data_decode_out  /* if (src >= src_end) return */
+
+lz4_block_match:
+    lhu  a5, 0(a1)
+    addi a1, a1, 2
+
+    andi a2, a2, 0x0F   /* match length */
+    beq  a2, t4, lz4_block_match_len_read
+lz4_block_match_len_done:
+    addi a2, a2, 4      /* += minimal len (4) */
+
+/*  lz4_offset_copy subroutine */
+
+/*
+ * uint32_t lz4_offset_copy(void *dst, uint32_t offset, uint32_t len)
+ * a0 = destination
+ * a2 = length
+ * a5 = offset
+ * return: a0 = destination + length
+ */
+lz4_offset_copy:
+    add  a7, a0, a2  /* a7 = dst_end = dst + len */
+    sub  a2, a0, a5  /* a2 = src = dst - offset */
+
+    bgeu a5, t5, lz4_offset_copy_far_loop
     /* offset <= 4 */
 lz4_offset_copy_near:
-    beq  a1, t1, lz4_offset_copy_near_1b
-    beq  a1, t2, lz4_offset_copy_near_2b
-    beq  a1, t3, lz4_offset_copy_near_3b
-    /* fall through, a1 = 4 */
+    beq  a5, t1, lz4_offset_copy_near_1b
+    beq  a5, t2, lz4_offset_copy_near_2b
+    beq  a5, t3, lz4_offset_copy_near_3b
+    /* fall through, a5 = 4 */
 lz4_offset_copy_near_4b:
     lw   a3, 0(a2)
     j    lz4_offset_copy_loop
@@ -52,7 +89,8 @@ lz4_offset_copy_near_2b:
 .balign 8
 lz4_offset_copy_near_3b:
     lw   a3, 0(a2)
-    and  a3, a3, a5
+    slli a3, a3, 8
+    srli a3, a3, 8
     slli a4, a3, 24
     or   a3, a3, a4
     j    lz4_offset_copy_loop
@@ -62,7 +100,7 @@ lz4_offset_copy_loop:
     sw   a3, 0(a0)
     sw   a3, 4(a0)
     addi a0, a0, 8
-    bltu a0, t6, lz4_offset_copy_loop
+    bltu a0, a7, lz4_offset_copy_loop
 
     j lz4_offset_copy_done
 
@@ -74,6 +112,30 @@ lz4_offset_copy_far_loop:
     sw   a4, 4(a0)
     addi a2, a2, 8
     addi a0, a0, 8
-    bltu a0, t6, lz4_offset_copy_far_loop
+    bltu a0, a7, lz4_offset_copy_far_loop
 
 lz4_offset_copy_done:
+    mv   a0, a7
+
+/* end of lz4_offset_copy */
+
+    j lz4_block_data_loop
+
+lz4_block_data_decode_out:
+    ret
+
+.balign 8
+lz4_block_lit_len_read:
+    lbu  a4, 0(a1)
+    addi a1, a1, 1
+    add  a3, a3, a4
+    bne  a4, t6, lz4_block_lit_len_done
+    j lz4_block_lit_len_read
+
+.balign 8
+lz4_block_match_len_read:
+    lbu  a4, 0(a1)
+    addi a1, a1, 1
+    add  a2, a2, a4
+    bne  a4, t6, lz4_block_match_len_read
+    j lz4_block_match_len_done
