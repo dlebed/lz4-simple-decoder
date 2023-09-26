@@ -137,5 +137,5 @@ lz4_block_match_len_read:
     lbu  a4, 0(a1)
     addi a1, a1, 1
     add  a2, a2, a4
-    bne  a4, t6, lz4_block_match_len_read
-    j lz4_block_match_len_done
+    bne  a4, t6, lz4_block_match_len_done
+    j lz4_block_match_len_read
