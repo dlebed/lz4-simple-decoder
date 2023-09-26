@@ -93,7 +93,7 @@ lz4_offset_copy_near_3b:
     srli a3, a3, 8
     slli a4, a3, 24
     or   a3, a3, a4
-    j    lz4_offset_copy_loop
+    j    lz4_offset_copy_loop_3b
 
 .balign 8
 lz4_offset_copy_loop:
@@ -101,6 +101,17 @@ lz4_offset_copy_loop:
     sw   a3, 4(a0)
     addi a0, a0, 8
     bltu a0, a7, lz4_offset_copy_loop
+
+    j lz4_offset_copy_done
+
+.balign 8
+lz4_offset_copy_loop_3b:
+    rori a4, a3, 8
+    sw   a3, 0(a0)
+    sw   a4, 4(a0)
+    rori a3, a4, 8
+    addi a0, a0, 8
+    bltu a0, a7, lz4_offset_copy_loop_3b
 
     j lz4_offset_copy_done
 
