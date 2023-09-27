@@ -31,14 +31,16 @@ lz4_block_data_loop:
 lz4_block_lit_len_done:
     add  a3, a1, a3     /* a3 = src_end = src + lit_len */
 
-lz4_block_lit_copy_loop:
-    lbu  a4, 0(a1)
-    sb   a4, 0(a0)
-    addi a0, a0, 1
-    addi a1, a1, 1
-    bltu a1, a3, lz4_block_lit_copy_loop
+    bgeu a3, a6, lz4_block_data_decode_out /* end of block */
 
-    bgeu a1, a6, lz4_block_data_decode_out  /* if (src >= src_end) return */
+lz4_block_lit_copy_loop:
+    lw   a4, 0(a1)
+    lw   a5, 4(a1)
+    sw   a4, 0(a0)
+    sw   a5, 4(a0)
+    addi a1, a1, 8
+    addi a0, a0, 8
+    bltu a1, a3, lz4_block_lit_copy_loop
 
 lz4_block_match:
     lhu  a5, 0(a1)
@@ -133,6 +135,18 @@ lz4_offset_copy_done:
     j lz4_block_data_loop
 
 lz4_block_data_decode_out:
+/*
+ * a1 = src
+ * a0 = dst
+ * a3 = src_end
+ */
+lz4_block_data_last_lit_loop:
+    lbu  a4, 0(a1)
+    sb   a4, 0(a0)
+    addi a0, a0, 1
+    addi a1, a1, 1
+    bltu a1, a3, lz4_block_data_last_lit_loop
+
     ret
 
 .balign 8
