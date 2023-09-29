@@ -29,9 +29,9 @@ lz4_block_data_loop:
     beqz a3, lz4_block_match
     beq  a3, t4, lz4_block_lit_len_read
 lz4_block_lit_len_done:
-    add  a3, a1, a3     /* a3 = src_end = src + lit_len */
+    add  a4, a1, a3     /* a4 = src_end = src + lit_len */
 
-    bgeu a3, a6, lz4_block_data_decode_out /* end of block */
+    bgeu a4, a6, lz4_block_data_decode_out /* end of block */
 
 lz4_block_lit_copy_loop:
     lw   a4, 0(a1)
@@ -138,33 +138,33 @@ lz4_block_data_decode_out:
 /*
  * a1 = src
  * a0 = dst
- * a3 = src_end
+ * a3 = len
+ * a4 = src_end
  */
-    sub  a2, a3, a1  /* a2 = len */
-    li   a4, 8
+    li   a2, 8
 
-    bltu a2, a4, lz4_block_data_last_lit_loop_1b
-    andi a2, a2, 0x07
-    sub  a2, a3, a2     /* a2 = src_end - (len % 8) */
+    bltu a3, a2, lz4_block_data_last_lit_loop_1b
+    andi a3, a3, 0x07
+    sub  a2, a4, a3     /* a2 = src_end - (len % 8) */
 
 .balign 8
 lz4_block_data_last_lit_loop_8b:
-    lw   a4, 0(a1)
+    lw   a3, 0(a1)
     lw   a5, 4(a1)
-    sw   a4, 0(a0)
+    sw   a3, 0(a0)
     sw   a5, 4(a0)
     addi a1, a1, 8
     addi a0, a0, 8
     bltu a1, a2, lz4_block_data_last_lit_loop_8b
 
-    bgeu a1, a3, lz4_block_data_out
+    bgeu a1, a4, lz4_block_data_out
 
 lz4_block_data_last_lit_loop_1b:
-    lbu  a4, 0(a1)
-    sb   a4, 0(a0)
+    lbu  a3, 0(a1)
+    sb   a3, 0(a0)
     addi a0, a0, 1
     addi a1, a1, 1
-    bltu a1, a3, lz4_block_data_last_lit_loop_1b
+    bltu a1, a4, lz4_block_data_last_lit_loop_1b
 
 lz4_block_data_out:
     ret
