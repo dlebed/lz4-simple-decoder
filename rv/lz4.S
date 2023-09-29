@@ -157,6 +157,8 @@ lz4_block_data_last_lit_loop_8b:
     addi a0, a0, 8
     bltu a1, a2, lz4_block_data_last_lit_loop_8b
 
+    bgeu a1, a3, lz4_block_data_out
+
 lz4_block_data_last_lit_loop_1b:
     lbu  a4, 0(a1)
     sb   a4, 0(a0)
@@ -164,6 +166,7 @@ lz4_block_data_last_lit_loop_1b:
     addi a1, a1, 1
     bltu a1, a3, lz4_block_data_last_lit_loop_1b
 
+lz4_block_data_out:
     ret
 
 .balign 8
