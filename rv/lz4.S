@@ -34,13 +34,17 @@ lz4_block_lit_len_done:
     bgeu a4, a6, lz4_block_data_decode_out /* end of block */
 
 lz4_block_lit_copy_loop:
-    lw   a4, 0(a1)
+    lw   a3, 0(a1)
     lw   a5, 4(a1)
-    sw   a4, 0(a0)
+    sw   a3, 0(a0)
     sw   a5, 4(a0)
     addi a1, a1, 8
     addi a0, a0, 8
-    bltu a1, a3, lz4_block_lit_copy_loop
+    bltu a1, a4, lz4_block_lit_copy_loop
+
+    sub  a3, a1, a4
+    mv   a1, a4
+    sub  a0, a0, a3
 
 lz4_block_match:
     lhu  a5, 0(a1)
