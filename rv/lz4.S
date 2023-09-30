@@ -112,11 +112,23 @@ lz4_offset_copy_loop:
 
 .balign 8
 lz4_offset_copy_loop_3b:
+#ifdef __riscv_zbb
     rori a4, a3, 8
     sw   a3, 0(a0)
     sw   a4, 4(a0)
     rori a3, a4, 8
     addi a0, a0, 8
+#else
+    sw   a3, 0(a0)
+    slli a4, a3, 24
+    srli a3, a3, 8
+    or   a3, a3, a4
+    sw   a3, 4(a0)
+    slli a4, a3, 24
+    srli a3, a3, 8
+    or   a3, a3, a4
+    addi a0, a0, 8
+#endif
     bltu a0, a7, lz4_offset_copy_loop_3b
 
     j lz4_offset_copy_done
